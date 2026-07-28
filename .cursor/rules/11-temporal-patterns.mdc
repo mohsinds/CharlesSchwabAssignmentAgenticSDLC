@@ -1,0 +1,42 @@
+---
+description: "Temporal workflow and activity patterns."
+globs: ["services/orchestrator/**/*.py"]
+alwaysApply: false
+---
+
+# Temporal Patterns
+
+## Workflow rules
+- Workflow code MUST be deterministic. No `datetime.now()`, no `random`, 
+  no direct I/O, no `requests`, no LLM calls. Use `workflow.now()`, 
+  `workflow.random()`.
+- All external work → Activities. Retries configured via 
+  `RetryPolicy(maximum_attempts=N, initial_interval, backoff_coefficient)`.
+- Long-running child workflows for each SDLC stage. Master workflow reads 
+  the DAG YAML, spawns children according to the graph, syncs on 
+  join nodes for parallel branches.
+- Signals: `approve(stage_id)`, `reject(stage_id, reason)`, 
+  `replan(from_stage, hint)`, `safe_stop()`.
+- Compensation: every stage that produces side effects registers a 
+  compensation activity. Master workflow's `except` block invokes 
+  compensations in reverse order (Saga).
+
+## Activity rules
+- Activities are idempotent where possible; use `activity_id` + a 
+  dedup table for non-idempotent ones.
+- Heartbeat for any activity > 10s. Timeout = 2× p95 expected duration.
+- Every activity emits an audit event on start, on success, on failure, 
+  and on retry.
+- LangGraph invocation lives in `agent_activity.py`. Never import 
+  LangGraph from workflow modules.
+
+## Task queues
+- `sdlc-workflows` — master + stage workflows
+- `agent-activities` — LLM-heavy, lower concurrency, higher timeout
+- `policy-activities` — fast, high concurrency
+- `audit-activities` — fire-and-forget, retry with long backoff
+
+## Testing
+- Use `temporalio.testing.WorkflowEnvironment` for workflow tests.
+- Mock activities with `activity.defn` stubs.
+- Test replay compatibility for every workflow change.

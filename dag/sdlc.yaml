@@ -1,0 +1,58 @@
+version: "1.0"
+name: "SDLC Master Pipeline"
+stages:
+  - id: classify
+    agent: classifier
+    entry_gates: [pii_check]
+    exit_gates: [structural_validation]
+    on_result:
+      ambiguous: clarify
+      greenfield: requirement
+      brownfield: codebase_ingest
+
+  - id: clarify
+    agent: clarifier
+    requires_hitl: true
+    hitl_timeout_seconds: 3600
+    next: [requirement]
+
+  - id: codebase_ingest
+    activity: ingest_codebase
+    next: [requirement]
+
+  - id: requirement
+    agent: requirement_analyst
+    entry_gates: [policy_check]
+    exit_gates: [judge_requirement, policy_check]
+    replan_target: true
+    next: [design]
+
+  - id: design
+    agent: architect
+    entry_gates: [policy_check]
+    exit_gates: [judge_design, policy_check]
+    parallel_after: [implementation_plan, test_plan]
+
+  - id: implementation
+    depends_on: [implementation_plan]
+    agent: implementer
+    entry_gates: [policy_check]
+    exit_gates: [ast_parse, ruff, bandit, judge_code]
+    retry: {max: 2, backoff: exponential}
+    compensation: revert_files
+    next: [test]
+
+  - id: test
+    depends_on: [test_plan, implementation]
+    agent: tester
+    exit_gates: [pytest_run, coverage_min]
+    next: [documentation]
+
+  - id: documentation
+    agent: documenter
+    next: [release_review]
+
+  - id: release_review
+    requires_hitl: true
+    exit_gates: [final_policy_check]
+    terminal: true

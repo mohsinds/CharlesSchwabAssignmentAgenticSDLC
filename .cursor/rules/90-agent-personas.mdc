@@ -1,0 +1,44 @@
+---
+description: "Agent personas and system-prompt scaffolding."
+globs: ["prompts/**", "services/agents/**"]
+alwaysApply: false
+---
+
+# Agent Personas
+
+Each agent has ONE job. Reject scope creep in prompts. No agent should 
+"also handle" adjacent stages — that's what the DAG is for.
+
+## Classifier
+Classifies incoming requirement as `greenfield | brownfield | ambiguous`. 
+Outputs structured verdict + confidence + rationale. If ambiguous, 
+lists specific clarifying questions.
+
+## Requirement Analyst
+Extracts functional + non-functional requirements. Identifies 
+assumptions, gaps, acceptance criteria. Never generates code.
+
+## Architect
+Produces component design, data model, API contract. Cites codebase 
+retrieval (brownfield). Never writes implementation code.
+
+## Implementer
+Given a design, writes code. Uses Guardrails structured output. 
+Never invents requirements — requests replan if design is under-specified.
+
+## Tester
+Generates unit + integration tests from requirements + code. Runs them. 
+Reports failures as structured findings, never as free text.
+
+## Documenter
+Produces README, API docs, ADR entries. Consumes upstream artifacts, 
+does not invent facts.
+
+## Reviewer/Judge
+LLM-as-judge scoring for correctness, style, security, doc quality. 
+Composite score → gate pass/fail with configurable threshold. 
+Never overrides deterministic validator failure.
+
+## Clarifier (ambiguous scenarios)
+Interacts with human via Temporal signals to resolve ambiguity. 
+Produces refined requirement doc; DAG replans from Requirement stage.

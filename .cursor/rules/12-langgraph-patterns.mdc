@@ -1,0 +1,40 @@
+---
+description: "LangGraph agent patterns."
+globs: ["services/agents/**/*.py"]
+alwaysApply: false
+---
+
+# LangGraph Patterns
+
+## Graph structure
+- One graph per SDLC stage. Each graph has typed state 
+  (Pydantic model in `state.py`).
+- Standard node set: `retrieve` → `plan` → `execute` → `self_review` → 
+  `output_validate`. Use conditional edges for replan loops (bounded).
+- Every graph exposes `.ainvoke(state) -> state`. Called from a 
+  Temporal Activity.
+
+## State
+- State is fully serializable (Pydantic). No live connections, no file 
+  handles. Serialize into `agent_activity` result payload for Temporal 
+  to persist in workflow history.
+- Include `trace_id`, `run_id`, `stage_id`, `parent_workflow_id` in every 
+  state object for cross-system correlation.
+
+## Prompts
+- Load via `prompt_loader.get(name, version=None)`. LangSmith Hub is 
+  canonical; falls back to `/prompts/*.md` on failure.
+- Never inline long prompts in code.
+
+## Tools
+- Tools are Pydantic-typed. Every tool call is logged as an audit event.
+- File-write tools MUST route through the policy engine before execution.
+
+## Replanning
+- Conditional edges may loop back to `plan` with an incremented 
+  `replan_count`. Cap at 3. On exhaustion, raise `ReplanExhausted` — 
+  Temporal workflow catches and escalates to HITL.
+
+## LangSmith
+- Every graph invocation is a LangSmith run. Set `metadata` with 
+  `workflow_id`, `stage`, `scenario_type`.

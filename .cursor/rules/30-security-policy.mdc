@@ -1,0 +1,36 @@
+---
+description: "Policy engine, PII, guardrails."
+globs: ["services/policy_engine/**/*.py", "policies/**"]
+alwaysApply: false
+---
+
+# Policy & Security
+
+## Policy engine boundary
+- `policy_gate.check(stage_id, phase, payload)` is the SINGLE entry point.
+  `phase` ∈ {`entry`, `exit`}.
+- Internally composes: Presidio (PII) → OPA (Rego rules) → 
+  Guardrails.ai (structural validation for LLM outputs).
+- Returns `PolicyDecision(allowed: bool, violations: list, 
+  requires_hitl: bool, redactions: dict)`.
+
+## OPA rules
+- Rego packages in `policies/*.rego`. One package per policy family.
+- Every policy has a corresponding test in `policies/*_test.rego`.
+- Loaded via OPA server (sidecar in docker-compose).
+
+## PII
+- Presidio config in `services/policy_engine/presidio_wrapper.py`.
+- Redact by default; log the fact of redaction (never the content) 
+  to the audit event.
+- Financial-services PII entities: SSN, credit card, bank account, 
+  routing number, IBAN — all enabled.
+
+## Guardrails.ai
+- Structured outputs for all LLM code-generation nodes. On validation 
+  failure, force one retry with corrective feedback in the prompt. 
+  After that, escalate to HITL.
+
+## Audit for policy actions
+- Every policy check emits `PolicyCheckEvent` with `decision`, 
+  `violations` (redacted), `elapsed_ms`. Include Rego bundle version.

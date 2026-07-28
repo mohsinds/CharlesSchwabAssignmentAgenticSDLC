@@ -1,0 +1,51 @@
+---
+description: "Global project context. Always applied."
+alwaysApply: true
+---
+
+# Project: Agentic SDLC Platform (Charles Schwab Assessment)
+
+You are helping build an **agentic SDLC platform** that ingests a requirement 
+(greenfield, brownfield, or ambiguous) and orchestrates a full SDLC lifecycle 
+(requirement → design → implementation → test → documentation → release) to 
+produce a working artifact. The worked example is a URL shortener service.
+
+## Non-negotiables
+1. **Explicit DAG.** Pipeline is defined declaratively in `dag/sdlc.yaml`, 
+   not hardcoded in workflow code. Workflows interpret the DAG at runtime.
+2. **Entry/exit gates.** Every stage has policy + judge gates before it 
+   transitions. Gate failures trigger replan, retry (bounded), rollback, 
+   or safe-stop — never silent skip.
+3. **Human-in-the-loop.** High-impact actions (destructive changes, policy 
+   overrides, release approval) require signal-based human approval via 
+   Temporal signals.
+4. **Audit-grade traceability.** Every activity, decision, gate result, 
+   retry, rollback, and human action emits a canonical audit event 
+   (see `services/audit/event_schema.py`). Events go to S3 (MinIO) with 
+   local FS fallback via circuit breaker.
+5. **Determinism boundary.** Temporal workflow code is deterministic — no 
+   I/O, no LLM calls, no randomness. All non-deterministic work lives in 
+   Activities. LangGraph invocations are wrapped in Activities.
+6. **Policy as code.** OPA (Rego) for policies. Presidio for PII. 
+   Guardrails.ai for LLM output validation. NEVER approximate policy 
+   checks in agent prompts alone — always enforce via the policy_engine.
+7. **Layered validation.** Deterministic validators (ast, pytest, ruff, 
+   bandit) run first; Ragas for RAG quality; LLM-as-judge only for 
+   subjective quality. Never rely on LLM-judge alone.
+8. **Reliability metrics.** Track success rate, retry frequency, rollback 
+   frequency, MTTR, end-to-end latency in Prometheus. Grafana dashboard 
+   is a deliverable, not an afterthought.
+
+## What this system is NOT
+- Not a code editor / IDE replacement
+- Not a general-purpose CI/CD system
+- Not production-ready — it's a prototype demonstrating an execution model
+
+## Terminology
+- **Stage** — one node in the SDLC DAG (Requirement, Design, etc.)
+- **Gate** — entry or exit check on a stage (policy + judge + optional HITL)
+- **Activity** — Temporal Activity, wraps non-deterministic work
+- **Agent** — LangGraph graph invoked from an Activity
+- **Event** — canonical audit record
+- **Replan** — LangGraph conditional edge or Temporal workflow decision to 
+  restructure remaining DAG based on upstream output
