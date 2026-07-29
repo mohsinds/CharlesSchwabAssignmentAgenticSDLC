@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse 80% 50% at 10% -10%, #c5d8e8 0%, transparent 55%),
+    radial-gradient(ellipse 60% 40% at 90% 0%, #d4e8e4 0%, transparent 50%),
+    #e8eef5;
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+}

@@ -1,0 +1,14 @@
+---
+description: "Python style for services."
+globs: ["**/*.py"]
+alwaysApply: false
+---
+
+# Python Style
+
+- Python 3.11+, type hints on public functions, Pydantic models for I/O.
+- Prefer `async` for I/O-bound paths (API, activities); keep Temporal
+  workflow code sync and deterministic.
+- No bare `except:`; catch specific exceptions and emit audit events.
+- Imports: stdlib → third-party → local (`services.*`).
+- Do not commit secrets; read from `services.common.config.Settings`.

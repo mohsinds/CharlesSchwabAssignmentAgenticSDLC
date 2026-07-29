@@ -1,0 +1,13 @@
+---
+description: "Testing expectations."
+globs: ["tests/**"]
+alwaysApply: false
+---
+
+# Testing
+
+- Unit tests for dag_loader, policy_gate, scoring, event schema.
+- Integration: Temporal WorkflowEnvironment with mocked activities.
+- Rego policies must have `*_test.rego` siblings.
+- E2E smoke uses replay mode so CI does not require live LLM keys.
+- Never assert on free-text LLM prose; assert on structured fields.

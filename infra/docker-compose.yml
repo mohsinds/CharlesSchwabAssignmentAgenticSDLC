@@ -1,0 +1,181 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: sdlc
+      POSTGRES_PASSWORD: sdlc
+      POSTGRES_DB: sdlc
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sdlc -d sdlc"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  temporal:
+    image: temporalio/auto-setup:1.25.2
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=sdlc
+      - POSTGRES_PWD=sdlc
+      - POSTGRES_SEEDS=postgres
+    ports:
+      - "7233:7233"
+
+  temporal-ui:
+    image: temporalio/ui:2.31.2
+    depends_on:
+      - temporal
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
+    ports:
+      - "8088:8080"
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: ["/bin/sh", "/create-bucket.sh"]
+    volumes:
+      - ./init/minio/create-bucket.sh:/create-bucket.sh:ro
+
+  opa:
+    image: openpolicyagent/opa:0.68.0
+    command:
+      - "run"
+      - "--server"
+      - "--addr=0.0.0.0:8181"
+      - "/policies"
+    ports:
+      - "8181:8181"
+    volumes:
+      - ../policies:/policies:ro
+
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - ../.env
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - LITELLM_MASTER_KEY=sk-agentic-sdlc-local
+      - DATABASE_URL=postgresql://sdlc:sdlc@postgres:5432/litellm
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./litellm_config.yaml:/app/config.yaml:ro
+    command: ["--config", "/app/config.yaml", "--port", "4000", "--host", "0.0.0.0"]
+
+  api:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.api
+    env_file:
+      - ../.env
+    environment:
+      - TEMPORAL_HOST=temporal:7233
+      - LITELLM_BASE_URL=http://litellm:4000
+      - DATABASE_URL=postgresql+asyncpg://sdlc:sdlc@postgres:5432/sdlc
+      - MINIO_ENDPOINT=minio:9000
+      - OPA_URL=http://opa:8181
+      - AUDIT_FS_FALLBACK_DIR=/data/audit
+      - ARTIFACTS_DIR=/data/artifacts
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../dag:/app/dag:ro
+      - ../prompts:/app/prompts:ro
+      - ../policies:/app/policies:ro
+      - ../scenarios:/app/scenarios:ro
+      - ../data/audit:/data/audit
+      - ../artifacts:/data/artifacts
+    depends_on:
+      - temporal
+      - minio
+      - opa
+      - litellm
+
+  worker:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.worker
+    env_file:
+      - ../.env
+    environment:
+      - TEMPORAL_HOST=temporal:7233
+      - LITELLM_BASE_URL=http://litellm:4000
+      - DATABASE_URL=postgresql+asyncpg://sdlc:sdlc@postgres:5432/sdlc
+      - MINIO_ENDPOINT=minio:9000
+      - OPA_URL=http://opa:8181
+      - AUDIT_FS_FALLBACK_DIR=/data/audit
+      - ARTIFACTS_DIR=/data/artifacts
+    volumes:
+      - ../dag:/app/dag:ro
+      - ../prompts:/app/prompts:ro
+      - ../policies:/app/policies:ro
+      - ../scenarios:/app/scenarios:ro
+      - ../data/audit:/data/audit
+      - ../artifacts:/data/artifacts
+    depends_on:
+      - temporal
+      - api
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+
+  prometheus:
+    image: prom/prometheus:v2.55.0
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - api
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+
+volumes:
+  pgdata:
+  miniodata:

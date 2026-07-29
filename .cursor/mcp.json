@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "langsmith": {
+      "command": "uvx",
+      "args": ["langsmith-mcp-server"],
+      "envFile": "${workspaceFolder}/.env"
+    },
+    "temporal": {
+      "command": "uvx",
+      "args": [
+        "temporal-mcp-server",
+        "--host",
+        "localhost:7233",
+        "--namespace",
+        "default",
+        "--tls-enabled",
+        "false"
+      ],
+      "envFile": "${workspaceFolder}/.env"
+    }
+  }
+}

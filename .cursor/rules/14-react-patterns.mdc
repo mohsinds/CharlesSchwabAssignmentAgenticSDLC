@@ -1,0 +1,13 @@
+---
+description: "React frontend patterns."
+globs: ["frontend/**/*.{ts,tsx}"]
+alwaysApply: false
+---
+
+# React Patterns
+
+- Vite + React + Tailwind. Functional components only.
+- API access only through `src/api/client.ts`.
+- Live updates via `useSSE`; pipeline state via `usePipeline`.
+- HITL actions go through `useApproval` → POST `/signals/{id}`.
+- Keep DagView driven by server stage status, not local simulation.

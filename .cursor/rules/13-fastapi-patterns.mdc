@@ -1,0 +1,14 @@
+---
+description: "FastAPI patterns for the control-plane API."
+globs: ["services/api/**/*.py"]
+alwaysApply: false
+---
+
+# FastAPI Patterns
+
+- Routers under `services/api/routers/`; wire in `main.py`.
+- Pydantic request/response models in `schemas/`.
+- Temporal client via `deps.get_temporal_client()` — never create
+  ad-hoc clients inside route handlers without DI.
+- SSE for live audit: `sse-starlette`; never poll Temporal from the browser.
+- Health endpoint must not depend on LLM availability.

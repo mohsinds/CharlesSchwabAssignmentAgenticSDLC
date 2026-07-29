@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentic-sdlc.local/dag/schema.json",
+  "title": "SDLC DAG",
+  "type": "object",
+  "required": ["version", "name", "stages"],
+  "properties": {
+    "version": { "type": "string" },
+    "name": { "type": "string" },
+    "stages": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/stage" }
+    }
+  },
+  "$defs": {
+    "stage": {
+      "type": "object",
+      "required": ["id"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "agent": { "type": "string" },
+        "activity": { "type": "string" },
+        "entry_gates": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "exit_gates": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "on_result": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "next": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "depends_on": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "parallel_after": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "requires_hitl": { "type": "boolean" },
+        "hitl_timeout_seconds": { "type": "integer", "minimum": 1 },
+        "replan_target": { "type": "boolean" },
+        "terminal": { "type": "boolean" },
+        "retry": {
+          "type": "object",
+          "properties": {
+            "max": { "type": "integer", "minimum": 0 },
+            "backoff": { "type": "string", "enum": ["exponential", "fixed", "linear"] }
+          }
+        },
+        "compensation": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

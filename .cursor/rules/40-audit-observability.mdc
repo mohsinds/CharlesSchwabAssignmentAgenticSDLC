@@ -1,0 +1,14 @@
+---
+description: "Audit and observability conventions."
+globs: ["services/audit/**/*.py", "services/common/metrics.py"]
+alwaysApply: false
+---
+
+# Audit & Observability
+
+- Every activity/gate/HITL/replan/compensation emits a canonical event
+  from `event_schema.py`.
+- Writer: MinIO primary, local FS fallback via circuit breaker.
+- Redact PII from event payloads before write; log redaction fact only.
+- Prometheus metrics: success, retry, rollback, MTTR/latency histograms.
+- Correlate with `trace_id`, `run_id`, `workflow_id` on every event.

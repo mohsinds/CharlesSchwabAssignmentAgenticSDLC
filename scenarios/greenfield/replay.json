@@ -1,0 +1,23 @@
+{
+  "scenario": "greenfield",
+  "events": [
+    {
+      "event_type": "ActivitySucceeded",
+      "stage_id": "classify",
+      "status": "completed",
+      "payload": { "classification": "greenfield", "mode": "replay" }
+    },
+    {
+      "event_type": "GateResult",
+      "stage_id": "requirement",
+      "status": "passed",
+      "payload": { "gate": "judge_requirement", "mode": "replay" }
+    },
+    {
+      "event_type": "GateResult",
+      "stage_id": "implementation",
+      "status": "passed",
+      "payload": { "gate": "ast_parse", "mode": "replay" }
+    }
+  ]
+}

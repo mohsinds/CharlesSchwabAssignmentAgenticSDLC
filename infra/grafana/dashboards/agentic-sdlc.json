@@ -1,0 +1,72 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "title": "Pipelines started",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(sdlc_pipeline_started_total[5m]))",
+          "legendFormat": "started/s"
+        }
+      ]
+    },
+    {
+      "title": "Pipelines completed by status",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum by (status) (rate(sdlc_pipeline_completed_total[5m]))",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    },
+    {
+      "title": "Retries",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 8 },
+      "targets": [{ "expr": "sum(sdlc_retry_total)" }]
+    },
+    {
+      "title": "Rollbacks",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 8 },
+      "targets": [{ "expr": "sum(sdlc_rollback_total)" }]
+    },
+    {
+      "title": "Stage duration p95",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, stage_id) (rate(sdlc_stage_duration_seconds_bucket[10m])))",
+          "legendFormat": "{{stage_id}}"
+        }
+      ]
+    },
+    {
+      "title": "E2E latency",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(sdlc_e2e_latency_seconds_bucket[10m])))",
+          "legendFormat": "p95"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["agentic-sdlc"],
+  "timezone": "browser",
+  "title": "Agentic SDLC",
+  "uid": "agentic-sdlc",
+  "version": 1
+}
